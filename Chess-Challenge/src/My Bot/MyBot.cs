@@ -8,40 +8,26 @@ public class MyBot : IChessBot
 {
     public Move Think(Board board, Timer timer)
     {
-        var color = board.IsWhiteToMove; // True is white, False is black   
+        var color = board.IsWhiteToMove; // True is white, False is black
+        var currentEval = EvaluateBoard(board, color);
+        var nextEval = -1m;
+        var maxEval = -1m;   
         Move[] moves = board.GetLegalMoves();
+        var moveChoice = new Move();
         for (int i = 0; i < moves.Length; i++)
         {
             board.MakeMove(moves[i]);
-            if (board.IsInCheckmate())
+            nextEval = EvaluateBoard(board, color);
+            if (nextEval >= maxEval)
             {
-                return moves[i];
+                maxEval = nextEval;
+                moveChoice = moves[i];
+
             }
             board.UndoMove(moves[i]);
         }
 
-
-        var captureMove = new Move();
-        for (int i = 0; i < moves.Length; i++)
-        {
-            board.MakeMove(moves[i]);
-            if (board.IsInCheck())
-            {
-                board.UndoMove(moves[i]);
-                return moves[i];
-            }
-            else board.UndoMove(moves[i]);
-        }
-        captureMove = moves.FirstOrDefault(x => x.CapturePieceType == PieceType.King, captureMove);
-        if (captureMove == new Move())
-        {
-            captureMove = moves.MaxBy(x => x.CapturePieceType);
-            if (captureMove.CapturePieceType <= 0)
-            {
-                captureMove = moves.FirstOrDefault(x => x.MovePieceType == PieceType.Queen, moves[0]);
-            }
-        }
-        return captureMove;
+        return maxEval > -1m ? moveChoice : moves[0]; 
     }
     public Move[] MakeMoveAndGetLegalMoves(Move move, Board board)
     {
@@ -53,6 +39,10 @@ public class MyBot : IChessBot
 
     public decimal EvaluateBoard(Board board, bool color)
     {
+        if (board.IsInCheckmate())
+        {
+            return color == board.IsWhiteToMove ? -2147483647 : 2147483647;
+        }
         var pieceList = board.GetAllPieceLists();
         var whiteScore = pieceList[0].Count
         + (pieceList[1].Count * 3)
